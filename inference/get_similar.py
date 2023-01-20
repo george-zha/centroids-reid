@@ -84,7 +84,7 @@ if __name__ == "__main__":
     ### Inference
     log.info("Running inference")
     embeddings, paths = run_inference(
-        model, val_loader, cfg, print_freq=args.print_freq
+        model, val_loader, cfg, print_freq=args.print_freq, use_cuda=True
     )
 
     ### Load gallery data
@@ -133,5 +133,5 @@ if __name__ == "__main__":
 
     log.info(f"Saving results to {str(SAVE_DIR)}")
     np.save(SAVE_DIR / "results.npy", out)
-    np.save(SAVE_DIR / "query_embeddings.npy", embeddings)
+    np.save(SAVE_DIR / "query_embeddings.npy", embeddings.cpu())
     np.save(SAVE_DIR / "query_paths.npy", paths)

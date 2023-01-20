@@ -35,7 +35,7 @@ class CTLModel(ModelBase):
         ]
         self.losses_dict = {n: [] for n in self.losses_names}
 
-    def training_step(self, batch, batch_idx, optimizer_idx=None):
+    def training_step(self, batch, batch_idx):
         opt, opt_center = self.optimizers(use_pl_optimizer=True)
 
         if self.hparams.SOLVER.USE_WARMUP_LR:
@@ -51,7 +51,7 @@ class CTLModel(ModelBase):
         opt_center.zero_grad()
         opt.zero_grad()
 
-        x, class_labels, camid, isReal = batch  # batch is a tuple
+        x, class_labels, camid, isReal = batch[0]  # batch is a tuple
 
         unique_classes = len(np.unique(class_labels.detach().cpu()))
 
@@ -151,7 +151,7 @@ class CTLModel(ModelBase):
             contrastive_loss_step + center_loss + xent_query + contrastive_loss_query
         )
 
-        self.manual_backward(total_loss, optimizer=opt)
+        self.manual_backward(total_loss)
         opt.step()
 
         for param in self.center_loss.parameters():

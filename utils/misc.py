@@ -104,18 +104,15 @@ def run_single(cfg, method, logger_save_dir):
         logger=loggers,
         fast_dev_run=False,
         check_val_every_n_epoch=cfg.SOLVER.EVAL_PERIOD,
-        accelerator=cfg.SOLVER.DIST_BACKEND,
+        accelerator="gpu",
+        # strategy="ddp",
         num_sanity_val_steps=0,
         replace_sampler_ddp=False,
-        checkpoint_callback=checkpoint_callback,
         precision=16 if cfg.USE_MIXED_PRECISION else 32,
         resume_from_checkpoint=cfg.MODEL.PRETRAIN_PATH
         if cfg.MODEL.RESUME_TRAINING
         else None,
-        callbacks=[periodic_checkpointer],
-        enable_pl_optimizer=True,
-        reload_dataloaders_every_epoch=True,
-        automatic_optimization=cfg.SOLVER.USE_AUTOMATIC_OPTIM,
+        callbacks=[checkpoint_callback],
     )
 
     train_loader = dm.train_dataloader(
@@ -126,6 +123,7 @@ def run_single(cfg, method, logger_save_dir):
     )
     val_dataloader = dm.val_dataloader()
     if cfg.TEST.ONLY_TEST:
+        print("inside test")
         method = method.load_from_checkpoint(
             cfg.MODEL.PRETRAIN_PATH,
             cfg=cfg,
@@ -133,11 +131,12 @@ def run_single(cfg, method, logger_save_dir):
             num_classes=dm.num_classes,
             use_multiple_loggers=True if len(loggers) > 1 else False,
         )
-        trainer.test(model=method, test_dataloaders=val_dataloader)
+        trainer.test(model=method, test_dataloaders=[val_dataloader])
         method.hparams.MODEL.USE_CENTROIDS = not method.hparams.MODEL.USE_CENTROIDS
-        trainer.test(model=method, test_dataloaders=val_dataloader)
+        trainer.test(model=method, test_dataloaders=[val_dataloader])
         method.hparams.MODEL.USE_CENTROIDS = not method.hparams.MODEL.USE_CENTROIDS
     else:
+        print("inside train")
         if cfg.MODEL.RESUME_TRAINING:
             method = method.load_from_checkpoint(
                 cfg.MODEL.PRETRAIN_PATH,
@@ -154,10 +153,10 @@ def run_single(cfg, method, logger_save_dir):
                 use_multiple_loggers=True if len(loggers) > 1 else False,
             )
         trainer.fit(
-            method, train_dataloader=train_loader, val_dataloaders=[val_dataloader]
+            method, train_dataloader=[train_loader], val_dataloaders=[val_dataloader]
         )
         method.hparams.MODEL.USE_CENTROIDS = not method.hparams.MODEL.USE_CENTROIDS
-        trainer.test(model=method, test_dataloaders=val_dataloader)
+        trainer.test(model=method, dataloaders=[val_dataloader])
         method.hparams.MODEL.USE_CENTROIDS = not method.hparams.MODEL.USE_CENTROIDS
 
 

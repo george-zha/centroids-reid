@@ -53,6 +53,7 @@ class ModelBase(pl.LightningModule):
     def __init__(self, cfg=None, test_dataloader=None, **kwargs):
         super().__init__()
 
+        self.automatic_optimization=False
         if cfg is None:
             hparams = {**kwargs}
         elif isinstance(cfg, dict):
@@ -60,7 +61,8 @@ class ModelBase(pl.LightningModule):
             if cfg.TEST.ONLY_TEST:
                 # To make sure that loaded hparams are overwritten by cfg we may have chnaged
                 hparams = {**kwargs, **cfg}
-        self.hparams = AttributeDict(hparams)
+        # self.hparams = AttributeDict(hparams)
+        self.hparams.update(hparams)
         self.save_hyperparameters(self.hparams)
 
         if test_dataloader is not None:
@@ -132,7 +134,7 @@ class ModelBase(pl.LightningModule):
             **kwargs,
         )
 
-    def training_step(self, batch, batch_idx, opt_idx=None):
+    def training_step(self, batch, batch_idx):
         raise NotImplementedError(
             "A used model should have its own training_step method implemented"
         )
@@ -292,7 +294,8 @@ class ModelBase(pl.LightningModule):
         log_data = {"mAP": mAP}
 
         # TODO This line below is hacky, but it works when grad_monitoring is active
-        self.trainer.logger_connector.callback_metrics.update(log_data)
+        # self.trainer.logger_connector.callback_metrics.update(log_data)
+        self.log("mAP",mAP)
         log_data = {**log_data, **topks}
         self.trainer.logger.log_metrics(log_data, step=self.trainer.current_epoch)
 

@@ -29,9 +29,10 @@ log = logging.getLogger(__name__)
 exctract_func = (
     lambda x: (x).rsplit(".", 1)[0].rsplit("_", 1)[0]
 )  ## To extract pid from filename. Example: /path/to/dir/product001_04.jpg -> pid = product001
-exctract_func = lambda x: Path(
-    x
-).parent.name  ## To extract pid from parent directory of an iamge. Example: /path/to/root/001/image_04.jpg -> pid = 001
+
+# exctract_func = lambda x: Path(
+#     x
+# ).parent.name  ## To extract pid from parent directory of an iamge. Example: /path/to/root/001/image_04.jpg -> pid = 001
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
