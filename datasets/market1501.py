@@ -69,6 +69,36 @@ class Market1501(ReidBaseDataModule):
 
     def _process_dir(self, dir_path, relabel=False):
         img_paths = glob.glob(osp.join(dir_path, '*.jpg'))
+        pattern = re.compile(r'([-\d]+)_c(\d)')
+
+        pid_container = set()
+        for img_path in img_paths:
+            pid, _ = map(int, pattern.search(img_path).groups())
+            if pid == -1: continue  # junk images are just ignored
+            pid_container.add(pid)
+        pid2label = {pid: label for label, pid in enumerate(pid_container)}
+
+        dataset_dict = defaultdict(list)
+        dataset = []
+
+        for idx, img_path in enumerate(img_paths):
+            pid, camid = map(int, pattern.search(img_path).groups())
+            if pid == -1: continue  # junk images are just ignored
+            assert 0 <= pid <= 1501  # pid == 0 means background
+            assert 1 <= camid <= 6
+            camid -= 1  # index starts from 0
+            if relabel: pid = pid2label[pid]
+            dataset.append((img_path, pid, camid, idx))
+            dataset_dict[pid].append((img_path, pid, camid, idx))
+
+        return dataset, dataset_dict
+
+
+class VerkadaData(Market1501):
+    dataset_dir = 'verkada_data_copy'
+
+    def _process_dir(self, dir_path, relabel=False):
+        img_paths = glob.glob(osp.join(dir_path, '*.jpg'))
         pattern = re.compile(r'([-\d]+)_c(\d+)')
 
         pid_container = set()
@@ -84,18 +114,13 @@ class Market1501(ReidBaseDataModule):
         for idx, img_path in enumerate(img_paths):
             pid, camid = map(int, pattern.search(img_path).groups())
             if pid == -1: continue  # junk images are just ignored
-
-            ### CHANGEME
-            # Notes: each 4 digit video id represents a camera
-            # If person shows up twice in a video, it should have a matching between them from the appearance-search-dedup
-            # This can be represented as camera1, sequence 1 and 2
-            # Person could be matched across multiple videos, so camid is greater than 6
-            
-            assert 0 <= pid <= 1501  # pid == 0 means background
-            assert 1 <= camid <= 6
-            camid -= 1  # index starts from 0
+            camid -= 1 # index starts from 0
             if relabel: pid = pid2label[pid]
             dataset.append((img_path, pid, camid, idx))
             dataset_dict[pid].append((img_path, pid, camid, idx))
 
         return dataset, dataset_dict
+
+class CombinedData(VerkadaData):
+    dataset_dir = 'combined_data'
+    

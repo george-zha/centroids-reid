@@ -3,7 +3,7 @@ import os
 
 for filename in os.listdir('.'):
     capture = cv2.VideoCapture(os.getcwd() + "/" + filename)
-    foldername = '/home/george/datasets/people-tracking-videos/' + filename.split(".")[0]
+    foldername = '/home/george/datasets/people-tracking-videos/images/' + filename.split(".")[0]
     os.mkdir(foldername)
 
     success, frame = capture.read()

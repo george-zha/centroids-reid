@@ -157,6 +157,8 @@ _C.TEST.VISUALIZE = "no"
 _C.TEST.VISUALIZE_TOPK = 10
 # Max number of query images plotted
 _C.TEST.VISUALIZE_MAX_NUMBER = 1000000
+# Run test after every epoch
+_C.TEST.RUN_AFTER_EPOCH = True
 
 # ---------------------------------------------------------------------------- #
 # MISC

@@ -21,7 +21,7 @@ class Parser:
         self.match_data = "/home/george/datasets/appearance-search-dedup/"
         self.video_data = "/home/george/datasets/people-tracking-videos/"
         self.framespervid = 5
-        self.output = "/home/george/datasets/verkada_data_copy/"
+        self.output = "/home/george/datasets/verkada_data/"
         self.debug = Debug()
         self.testsplit = 0.2
 
@@ -61,7 +61,6 @@ class Parser:
         pid: person id
         """
         frames_ret = []
-        random.seed()
 
         # Open people-tracking-videos annotation file
         filename = self.anno_info[anno_id]['folder']
@@ -82,9 +81,6 @@ class Parser:
                 else:
                     frames = range(seg_start, seg_end)
 
-                if frames:
-                    queryimg = random.sample(frames, 1)[0]
-
                 for i in frames:
                     rpath = str(i) + ".jpg"
                     rpath = self.video_data + "images/" + filename + "/" + rpath
@@ -99,15 +95,14 @@ class Parser:
 
                     image_path = str(pid) + "_c" + str(cid) + "_" + str(1000000+i)[1:] + ".jpg"
                     cv.imwrite(out + image_path, nframe)
-                    if i == queryimg:
-                        queryimg = image_path
-                    frames_ret.append(out + image_path)
+                    frames_ret.append(image_path)
 
         if len(frames_ret) <= 1:
             for i in frames_ret:
-                os.remove(i)
+                os.remove(out + i)
                 self.debug.print("Deleted pid: " + str(pid))
         elif out == self.test:
+            queryimg = random.sample(frames_ret, 1)[0]
             os.system('cp ' + out + queryimg + ' ' + self.query + queryimg)
             os.system('rm ' + out + queryimg)
 
@@ -198,6 +193,7 @@ class Parser:
         anno2pid = {}
         pid = 0
         anno_dir = self.match_data + "releases/latest/annotations/"
+        random.seed()
 
         for filename in sorted(os.listdir(anno_dir)):
             with open(anno_dir + filename) as anno_file:
