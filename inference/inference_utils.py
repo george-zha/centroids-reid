@@ -81,9 +81,9 @@ class ImageDataset(Dataset):
         if self.transform is not None:
             img = self.transform(img)
         return (
-            img,
-            "",
-            img_path,
+            img
+            # "",
+            # img_path,
         )  ## Hack to be consistent with ImageFolderWithPaths dataset
 
 
@@ -104,14 +104,13 @@ def make_inference_data_loader(cfg, path, dataset_class):
 def _inference(model, batch, use_cuda, normalize_with_bn=True):
     model.eval()
     with torch.no_grad():
-        data, _, filename = batch
+        data = batch
         _, global_feat = model.backbone(
             data.cuda() if use_cuda else data
         )
         if normalize_with_bn:
             global_feat = model.bn(global_feat)
-        return global_feat, filename
-
+        return global_feat
 
 def run_inference(model, val_loader, cfg, print_freq, use_cuda):
     embeddings = []

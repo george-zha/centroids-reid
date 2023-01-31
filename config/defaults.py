@@ -71,7 +71,7 @@ _C.DATASETS.JSON_TRAIN_PATH = ""
 # -----------------------------------------------------------------------------
 _C.DATALOADER = CN()
 # Number of data loading threads
-_C.DATALOADER.NUM_WORKERS = 6
+_C.DATALOADER.NUM_WORKERS = 4
 # Sampler for data loading
 _C.DATALOADER.SAMPLER = "random_identity"
 # Number of instance for one batch

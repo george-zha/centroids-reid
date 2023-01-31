@@ -22,6 +22,9 @@ from tqdm import tqdm
 from config import cfg
 from modelling.bases import ModelBase
 from utils.misc import run_main
+from inference.inference_utils import (
+    ImageDataset, make_inference_data_loader, _inference
+)
 
 
 class CTLModel(ModelBase):
@@ -34,6 +37,9 @@ class CTLModel(ModelBase):
             "centroid_triplet",
         ]
         self.losses_dict = {n: [] for n in self.losses_names}
+
+    def forward(self, batch):
+        return _inference(self, batch, use_cuda=False)
 
     def training_step(self, batch, batch_idx, optimizer_idx=None):
         opt, opt_center = self.optimizers(use_pl_optimizer=True)
