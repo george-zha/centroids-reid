@@ -95,7 +95,7 @@ class Market1501(ReidBaseDataModule):
 
 
 class VerkadaData(Market1501):
-    dataset_dir = 'verkada_data_copy'
+    dataset_dir = 'verkada_data'
 
     def _process_dir(self, dir_path, relabel=False):
         img_paths = glob.glob(osp.join(dir_path, '*.jpg'))
