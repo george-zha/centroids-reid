@@ -83,6 +83,7 @@ def run_single(cfg, method, logger_save_dir):
         monitor=cfg.SOLVER.MONITOR_METRIC_NAME,
         mode=cfg.SOLVER.MONITOR_METRIC_MODE,
         verbose=True,
+        save_last=True
     )
 
     periodic_checkpointer = ModelCheckpointPeriodic(

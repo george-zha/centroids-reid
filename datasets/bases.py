@@ -24,6 +24,9 @@ from tqdm import tqdm
 
 from .samplers import get_sampler
 from .transforms import ReidTransforms
+from .dukemtmcreid import DukeMTMCreID
+from .market1501 import Market1501, VerkadaData, CombinedData
+from .lpw import LPW
 
 
 def pil_loader(path):
@@ -45,6 +48,27 @@ class ReidBaseDataModule(pl.LightningDataModule):
         self.num_instances = (
             kwargs.get("num_instances") if "num_instances" in kwargs else 4
         )
+
+    def setup(self):
+        transforms_base = ReidTransforms(self.cfg)
+
+        train, train_dict = self._process_dir(self.train_dir, relabel=True)
+        self.train_dict = train_dict
+        self.train_list = train
+        self.train = BaseDatasetLabelledPerPid(train_dict, transforms_base.build_transforms(is_train=True), self.num_instances, self.cfg.DATALOADER.USE_RESAMPLING)
+        
+        query, query_dict = self._process_dir(self.query_dir, relabel=False)
+        gallery, gallery_dict  = self._process_dir(self.gallery_dir, relabel=False)
+        self.query_list = query
+        self.gallery_list = gallery
+        self.val = BaseDatasetLabelled(query+gallery, transforms_base.build_transforms(is_train=False))
+
+        self._print_dataset_statistics(train, query, gallery)
+        # For reid_metic to evaluate properly
+        num_query_pids, num_query_imgs, num_query_cams = self._get_imagedata_info(query)
+        num_train_pids, num_train_imgs, num_train_cams = self._get_imagedata_info(train)
+        self.num_query = len(query)
+        self.num_classes = num_train_pids
 
     def _get_imagedata_info(self, data):
         pids, cams = [], []
@@ -154,6 +178,12 @@ class ReidBaseDataModule(pl.LightningDataModule):
             js = json.load(f)
 
         return js
+
+
+class ReidDataWrapper(ReidBaseDataModule):
+    """
+    Wrapper class for multiple reid datasets
+    """
 
 
 class COCODatasetBase(ReidBaseDataModule):

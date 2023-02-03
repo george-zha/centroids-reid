@@ -142,6 +142,8 @@ tb_logs/
 .vscode
 logs/
 models/
+experiments/
+mlruns/
 *.pyc
 debugs/
 *.c

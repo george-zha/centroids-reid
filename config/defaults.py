@@ -60,9 +60,9 @@ _C.INPUT.PADDING = 10
 # -----------------------------------------------------------------------------
 _C.DATASETS = CN()
 # List of the dataset names for training, as present in paths_catalog.py
-_C.DATASETS.NAMES = "market1501"
+_C.DATASETS.NAMES = [""]
 # Root directory where datasets should be used (and downloaded if not found)
-_C.DATASETS.ROOT_DIR = "/home/data"
+_C.DATASETS.ROOT_DIR = "/home/george/datasets"
 # Path to json train file for datasets that require it
 _C.DATASETS.JSON_TRAIN_PATH = ""
 

@@ -189,6 +189,7 @@ if __name__ == "__main__":
         default=None,
         nargs=argparse.REMAINDER,
     )
+    parser.add_argument("--list_data", default="", help="path to config file", type=str, nargs='+')
 
     args = parser.parse_args()
 
