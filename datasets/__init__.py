@@ -31,11 +31,11 @@ def get_names():
 
 
 def init_dataset(dataset_names, *args, **kwargs):
-    data_object = ReidBaseDataModule(*args, **kwargs)
     datasets = []
     for name in dataset_names:
         if name not in __factory.keys():
             raise KeyError("Unknown datasets: {}".format(name))
         datasets.append(__factory[name](**kwargs))
-    data_object.datasets = datasets
-    return data_object
+    import ipdb
+    ipdb.set_trace()
+    return ReidBaseDataModule(datasets, *args, **kwargs)

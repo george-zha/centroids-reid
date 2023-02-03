@@ -49,6 +49,4 @@ class LPW():
                     idx += 1
             camid += 1
 
-        return dataset, dataset_dict, camid
-
-    
+        return dataset, dataset_dict

@@ -35,7 +35,7 @@ class RandomIdentitySampler(Sampler):
             if len_ % self.num_instances == 1:
                 len_ -= 1
             pid_full_ocurances= int(np.ceil(len_/self.num_instances))
-
+            # index_dic tracks how many samples can be taken from a pid based on num_instances and num of items in that pid
             self.index_dic[pid].extend([pid] * pid_full_ocurances)
             lens_list.append(pid_full_ocurances)
         self.pids = list(self.index_dic.keys())
@@ -67,7 +67,7 @@ class RandomIdentitySampler(Sampler):
                     avai_pids.remove(pid)
 
         assert len(final_idxs) % (self.batch_size * self.world_size) == 0, f"Number of elements in the sampler indices {len(final_idxs)} must be divisible by the batch_size {self.batch_size * self.world_size}, but it is not!"
-
+        # final_idxs in groups of batch_size * world_size, randomly allocated, split by world_size and distribute by rank
         final_idxs = list(np.array_split(final_idxs, self.world_size)[self.rank])
 
         if len(final_idxs) % self.batch_size != 0:

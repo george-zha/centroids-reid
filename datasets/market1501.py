@@ -59,10 +59,10 @@ class Market1501():
             dataset.append((img_path, pid, camid, idx))
             dataset_dict[pid].append((img_path, pid, camid, idx))
 
-        return dataset, dataset_dict, camlabel + 6
+        return dataset, dataset_dict
 
 
-class VerkadaData():
+class VerkadaData(Market1501):
     dataset_dir = 'verkada_data'
 
     def _process_dir(self, dir_path, relabel=0, camlabel=0):
@@ -85,7 +85,7 @@ class VerkadaData():
             dataset.append((img_path, pid, camid, idx))
             dataset_dict[pid].append((img_path, pid, camid, idx))
 
-        return dataset, dataset_dict, camlabel 
+        return dataset, dataset_dict 
 
 
 class CombinedData(VerkadaData):

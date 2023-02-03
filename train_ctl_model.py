@@ -184,18 +184,21 @@ if __name__ == "__main__":
         "--config_file", default="", help="path to config file", type=str
     )
     parser.add_argument(
+        "--dataset", help="path to config file", action='append'
+    )
+    parser.add_argument(
         "opts",
         help="Modify config options using the command-line",
         default=None,
         nargs=argparse.REMAINDER,
     )
-    parser.add_argument("--list_data", default="", help="path to config file", type=str, nargs='+')
-
     args = parser.parse_args()
+
 
     if args.config_file != "":
         cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
+    cfg.DATASETS.NAMES = args.dataset
 
     logger_save_dir = f"{Path(__file__).stem}"
 

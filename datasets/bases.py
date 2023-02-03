@@ -41,9 +41,10 @@ class ReidBaseDataModule(pl.LightningDataModule):
     Base class for reid datasets
     """
 
-    def __init__(self, cfg, **kwargs):
+    def __init__(self, datasets, cfg, **kwargs):
         super().__init__()
         self.cfg = cfg
+        self.datasets = datasets
         self.num_workers = kwargs.get("num_workers") if "num_workers" in kwargs else 6
         self.num_instances = (
             kwargs.get("num_instances") if "num_instances" in kwargs else 4
@@ -52,22 +53,33 @@ class ReidBaseDataModule(pl.LightningDataModule):
     def setup(self):
         transforms_base = ReidTransforms(self.cfg)
 
-        train, train_dict = self._process_dir(self.train_dir, relabel=True)
-        self.train_dict = train_dict
-        self.train_list = train
-        self.train = BaseDatasetLabelledPerPid(train_dict, transforms_base.build_transforms(is_train=True), self.num_instances, self.cfg.DATALOADER.USE_RESAMPLING)
-        
-        query, query_dict = self._process_dir(self.query_dir, relabel=False)
-        gallery, gallery_dict  = self._process_dir(self.gallery_dir, relabel=False)
-        self.query_list = query
-        self.gallery_list = gallery
-        self.val = BaseDatasetLabelled(query+gallery, transforms_base.build_transforms(is_train=False))
+        self.train_dict = {}
+        self.train_list = []
+        self.query_list = []
+        self.gallery_list = []
 
-        self._print_dataset_statistics(train, query, gallery)
+        for dataset in self.datasets:
+            num_train_pids, _, num_train_cams = self._get_imagedata_info(self.train_list)
+            num_query_pids, _, num_query_cams = self._get_imagedata_info(self.query_list)
+            num_gallery_pids, _, num_gallery_cams = self._get_imagedata_info(self.gallery_list)
+
+            train,train_dict = dataset._process_dir(dataset.train_dir, relabel=num_train_pids, camlabel=num_train_cams)
+            query, query_dict = dataset._process_dir(dataset.query_dir, relabel=num_query_pids, camlabel=num_query_cams)
+            gallery, gallery_dict  = dataset._process_dir(dataset.gallery_dir, relabel=num_gallery_pids, camlabel=num_gallery_cams)
+            
+            self.train_dict.update(train_dict)
+            self.train_list.extend(train)
+            self.query_list.extend(query)
+            self.gallery_list.extend(gallery)
+            
+        self.train = BaseDatasetLabelledPerPid(self.train_dict, transforms_base.build_transforms(is_train=True), self.num_instances, self.cfg.DATALOADER.USE_RESAMPLING)
+        self.val = BaseDatasetLabelled(self.query_list+self.gallery_list, transforms_base.build_transforms(is_train=False))
+
+        self._print_dataset_statistics(self.train_list, self.query_list, self.gallery_list)
         # For reid_metic to evaluate properly
-        num_query_pids, num_query_imgs, num_query_cams = self._get_imagedata_info(query)
-        num_train_pids, num_train_imgs, num_train_cams = self._get_imagedata_info(train)
-        self.num_query = len(query)
+        num_query_pids, num_query_imgs, num_query_cams = self._get_imagedata_info(self.query_list)
+        num_train_pids, num_train_imgs, num_train_cams = self._get_imagedata_info(self.train_list)
+        self.num_query = len(self.query_list)
         self.num_classes = num_train_pids
 
     def _get_imagedata_info(self, data):
@@ -178,12 +190,6 @@ class ReidBaseDataModule(pl.LightningDataModule):
             js = json.load(f)
 
         return js
-
-
-class ReidDataWrapper(ReidBaseDataModule):
-    """
-    Wrapper class for multiple reid datasets
-    """
 
 
 class COCODatasetBase(ReidBaseDataModule):
