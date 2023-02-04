@@ -53,6 +53,7 @@ class Market1501():
 
         for idx, img_path in enumerate(img_paths):
             pid, camid = map(int, pattern.search(img_path).groups())
+            if pid == -1: continue
             assert 1 <= camid <= 6
             camid = camid + camlabel - 1  # index starts from 0
             pid = pid2label[pid]

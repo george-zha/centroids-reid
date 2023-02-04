@@ -75,7 +75,8 @@ class RandomIdentitySampler(Sampler):
             final_idxs = final_idxs[:-reminder]
 
         assert len(final_idxs) % self.batch_size == 0, f"Number of elements in the sampler indices after the split {len(final_idxs)} must be divisible by the batch_size {self.batch_size}, but it is not!"
-
+        import ipdb
+        ipdb.set_trace()
         self.length = len(final_idxs)
         return iter(final_idxs)
 

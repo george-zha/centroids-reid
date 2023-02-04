@@ -36,6 +36,5 @@ def init_dataset(dataset_names, *args, **kwargs):
         if name not in __factory.keys():
             raise KeyError("Unknown datasets: {}".format(name))
         datasets.append(__factory[name](**kwargs))
-    import ipdb
-    ipdb.set_trace()
+
     return ReidBaseDataModule(datasets, *args, **kwargs)

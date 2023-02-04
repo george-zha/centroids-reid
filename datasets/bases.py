@@ -66,7 +66,6 @@ class ReidBaseDataModule(pl.LightningDataModule):
             train,train_dict = dataset._process_dir(dataset.train_dir, relabel=num_train_pids, camlabel=num_train_cams)
             query, query_dict = dataset._process_dir(dataset.query_dir, relabel=num_query_pids, camlabel=num_query_cams)
             gallery, gallery_dict  = dataset._process_dir(dataset.gallery_dir, relabel=num_gallery_pids, camlabel=num_gallery_cams)
-            
             self.train_dict.update(train_dict)
             self.train_list.extend(train)
             self.query_list.extend(query)
