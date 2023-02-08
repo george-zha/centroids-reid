@@ -9,7 +9,7 @@ Adapted and extended by:
 """
 
 from .dukemtmcreid import DukeMTMCreID
-from .market1501 import Market1501, VerkadaData
+from .market1501 import Market1501, VerkadaData, CombinedData
 from .df1 import DF1
 from .street2shop import Street2Shop
 from .lpw import LPW
@@ -21,6 +21,7 @@ __factory = {
     "df1": DF1,
     "street2shop": Street2Shop,
     "verkada_data": VerkadaData,
+    "combined_data": CombinedData,
     "lpw": LPW,
 }
 

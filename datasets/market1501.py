@@ -35,7 +35,7 @@ class Market1501():
         self.query_dir = osp.join(self.dataset_dir, 'query')
         self.gallery_dir = osp.join(self.dataset_dir, 'bounding_box_test')
 
-    def _process_dir(self, dir_path, relabel=0, camlabel = 0):
+    def _process_dir(self, dir_path, reindex=0, relabel=False):
         img_paths = glob.glob(osp.join(dir_path, '*.jpg'))
         pattern = re.compile(r'([-\d]+)_c(\d)')
 
@@ -46,7 +46,10 @@ class Market1501():
                 img_paths.remove(img_path)
                 continue  # junk images are just ignored
             pid_container.add(pid)
-        pid2label = {pid: label+relabel for label, pid in enumerate(pid_container)}
+        if relabel:
+            pid2label = {pid: label+reindex for label, pid in enumerate(pid_container)}
+        else:
+            pid2label = {label: label+reindex for pid, label in enumerate(pid_container)}
 
         dataset_dict = defaultdict(list)
         dataset = []
@@ -55,7 +58,7 @@ class Market1501():
             pid, camid = map(int, pattern.search(img_path).groups())
             if pid == -1: continue
             assert 1 <= camid <= 6
-            camid = camid + camlabel - 1  # index starts from 0
+            camid -= 1  # index starts from 0
             pid = pid2label[pid]
             dataset.append((img_path, pid, camid, idx))
             dataset_dict[pid].append((img_path, pid, camid, idx))
@@ -66,7 +69,7 @@ class Market1501():
 class VerkadaData(Market1501):
     dataset_dir = 'verkada_data'
 
-    def _process_dir(self, dir_path, relabel=0, camlabel=0):
+    def _process_dir(self, dir_path, reindex=0, relabel=False):
         img_paths = glob.glob(osp.join(dir_path, '*.jpg'))
         pattern = re.compile(r'([-\d]+)_c(\d+)')
 
@@ -74,17 +77,23 @@ class VerkadaData(Market1501):
         for img_path in img_paths:
             pid, _ = map(int, pattern.search(img_path).groups())
             pid_container.add(pid)
-        pid2label = {pid: label+relabel for label, pid in enumerate(pid_container)}
+        
+        if relabel:
+            pid2label = {pid: label+reindex for label, pid in enumerate(pid_container)}
+        else:
+            pid2label = {label: label+reindex for pid, label in enumerate(pid_container)}
 
         dataset_dict = defaultdict(list)
         dataset = []
 
         for idx, img_path in enumerate(img_paths):
             pid, camid = map(int, pattern.search(img_path).groups())
-            camid = camid + camlabel -1 # index starts from 0
+            camid -= 1 # index starts from 0
             pid = pid2label[pid]
             dataset.append((img_path, pid, camid, idx))
             dataset_dict[pid].append((img_path, pid, camid, idx))
 
         return dataset, dataset_dict 
     
+class CombinedData(VerkadaData):
+    dataset_dir = 'combined_data'

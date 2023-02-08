@@ -36,7 +36,7 @@ class DukeMTMCreID():
         self.query_dir = osp.join(self.dataset_dir, 'DukeMTMC-reID/query')
         self.gallery_dir = osp.join(self.dataset_dir, 'DukeMTMC-reID/bounding_box_test')
 
-    def _process_dir(self, dir_path, relabel=0, camlabel = 0):
+    def _process_dir(self, dir_path, reindex=0, relabel=False):
         img_paths = glob.glob(osp.join(dir_path, '*.jpg'))
         pattern = re.compile(r'([-\d]+)_c(\d)')
 
@@ -44,16 +44,19 @@ class DukeMTMCreID():
         for img_path in img_paths:
             pid, _ = map(int, pattern.search(img_path).groups())
             pid_container.add(pid)
-        pid2label = {pid: label+relabel for label, pid in enumerate(pid_container)}
+        if relabel:
+            pid2label = {pid: label+reindex for label, pid in enumerate(pid_container)}
+        else:
+            pid2label = {label: label+reindex for pid, label in enumerate(pid_container)}
 
         dataset_dict = defaultdict(list)
         dataset = []
         for idx, img_path in enumerate(img_paths):
             pid, camid = map(int, pattern.search(img_path).groups())
             assert 1 <= camid <= 8
-            camid = camid + camlabel - 1  # index starts from 0
+            camid -= 1  # index starts from 0
             pid = pid2label[pid]
             dataset.append((img_path, pid, camid, idx))
             dataset_dict[pid].append((img_path, pid, camid, idx))
-
-        return dataset, dataset_dict, camlabel + 8
+            
+        return dataset, dataset_dict

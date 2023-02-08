@@ -56,21 +56,26 @@ class ReidBaseDataModule(pl.LightningDataModule):
         self.train_dict_per_dataset = []
         self.train_dict = {}
         self.train_list = []
+        self.query_dict = {}
         self.query_list = []
+        self.gallery_dict = {}
         self.gallery_list = []
 
         for dataset in self.datasets:
-            num_train_pids, _, num_train_cams = self._get_imagedata_info(self.train_list)
-            num_query_pids, _, num_query_cams = self._get_imagedata_info(self.query_list)
-            num_gallery_pids, _, num_gallery_cams = self._get_imagedata_info(self.gallery_list)
+            num_train_pids = 0 if not self.train_dict else max(self.train_dict.keys())
+            num_query_pids = 0 if not self.query_dict else max(self.query_dict.keys())
+            num_gallery_pids = 0 if not self.gallery_dict else max(self.gallery_dict.keys())
 
-            train ,train_dict = dataset._process_dir(dataset.train_dir, relabel=num_train_pids, camlabel=num_train_cams)
-            query, query_dict = dataset._process_dir(dataset.query_dir, relabel=num_query_pids, camlabel=num_query_cams)
-            gallery, gallery_dict  = dataset._process_dir(dataset.gallery_dir, relabel=num_gallery_pids, camlabel=num_gallery_cams)
+            train ,train_dict = dataset._process_dir(dataset.train_dir, reindex=num_train_pids, relabel=True)
+            query, query_dict = dataset._process_dir(dataset.query_dir, reindex=num_query_pids, relabel=False)
+            gallery, gallery_dict  = dataset._process_dir(dataset.gallery_dir, reindex=num_gallery_pids, relabel=False)
+
             self.train_dict_per_dataset.append(train_dict)
             self.train_dict.update(train_dict)
             self.train_list.extend(train)
+            self.query_dict.update(query_dict)
             self.query_list.extend(query)
+            self.gallery_dict.update(gallery_dict)
             self.gallery_list.extend(gallery)
             
         self.train = BaseDatasetLabelledPerPid(self.train_dict, transforms_base.build_transforms(is_train=True), self.num_instances, self.cfg.DATALOADER.USE_RESAMPLING)

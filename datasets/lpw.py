@@ -27,21 +27,25 @@ class LPW():
                 self.train_dir.append(osp.join(self.dataset_dir, i, j))
 
 
-    def _process_dir(self, dir_path, relabel=0, camlabel=0):
+    def _process_dir(self, dir_path, reindex=0, relabel=False):
         dataset_dict = defaultdict(list)
         dataset = []
 
         label2pid = {}
-        camid = camlabel
+        camid = 0
         idx = 0
         pid = 0
         for view in dir_path:
             for label in listdir(view):
-                if label not in label2pid:
-                    label2pid[label] = pid + relabel
+                label = int(label)
+                if label not in label2pid and relabel:
+                    label2pid[label] = pid + reindex
                     pid += 1
-                pidc = label2pid[label] if relabel else label
+                elif label not in label2pid:
+                    label2pid[label] = label + reindex
+                pidc = label2pid[label]
 
+                label = str(label)
                 for image in listdir(osp.join(view, label)):
                     img_path = osp.join(view, label, image)
                     dataset.append((img_path, pidc, camid, idx))
