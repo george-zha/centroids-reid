@@ -45,7 +45,7 @@ class LPW():
                 for image in listdir(osp.join(view, label)):
                     img_path = osp.join(view, label, image)
                     dataset.append((img_path, pidc, camid, idx))
-                    dataset_dict[pidc].append(img_path, pidc, camid, idx)
+                    dataset_dict[pidc].append((img_path, pidc, camid, idx))
                     idx += 1
             camid += 1
 

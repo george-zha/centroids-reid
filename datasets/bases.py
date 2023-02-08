@@ -25,7 +25,7 @@ from tqdm import tqdm
 from .samplers import get_sampler
 from .transforms import ReidTransforms
 from .dukemtmcreid import DukeMTMCreID
-from .market1501 import Market1501, VerkadaData, CombinedData
+from .market1501 import Market1501, VerkadaData
 from .lpw import LPW
 
 
@@ -53,6 +53,7 @@ class ReidBaseDataModule(pl.LightningDataModule):
     def setup(self):
         transforms_base = ReidTransforms(self.cfg)
 
+        self.train_dict_per_dataset = []
         self.train_dict = {}
         self.train_list = []
         self.query_list = []
@@ -63,9 +64,10 @@ class ReidBaseDataModule(pl.LightningDataModule):
             num_query_pids, _, num_query_cams = self._get_imagedata_info(self.query_list)
             num_gallery_pids, _, num_gallery_cams = self._get_imagedata_info(self.gallery_list)
 
-            train,train_dict = dataset._process_dir(dataset.train_dir, relabel=num_train_pids, camlabel=num_train_cams)
+            train ,train_dict = dataset._process_dir(dataset.train_dir, relabel=num_train_pids, camlabel=num_train_cams)
             query, query_dict = dataset._process_dir(dataset.query_dir, relabel=num_query_pids, camlabel=num_query_cams)
             gallery, gallery_dict  = dataset._process_dir(dataset.gallery_dir, relabel=num_gallery_pids, camlabel=num_gallery_cams)
+            self.train_dict_per_dataset.append(train_dict)
             self.train_dict.update(train_dict)
             self.train_list.extend(train)
             self.query_list.extend(query)
@@ -99,7 +101,7 @@ class ReidBaseDataModule(pl.LightningDataModule):
         num_gallery_pids, num_gallery_imgs, num_gallery_cams = self._get_imagedata_info(
             gallery
         )
-
+        assert(num_train_pids == len(self.train_dict))
         print("Dataset statistics:")
         print("  ----------------------------------------")
         print("  subset   | # ids | # images | # cameras")
@@ -143,8 +145,9 @@ class ReidBaseDataModule(pl.LightningDataModule):
         world_size = trainer.num_nodes * trainer.num_processes
         sampler = get_sampler(
             sampler_name,
-            data_source=self.train_dict,
+            data_source=self.train_dict_per_dataset,
             batch_size=self.cfg.SOLVER.IMS_PER_BATCH,
+            dataset_sizes=self.cfg.DATASETS.BATCH_SIZE,
             num_instances=self.num_instances,
             world_size=world_size,
             rank=rank,
@@ -375,6 +378,7 @@ class COCODatasetBase(ReidBaseDataModule):
 class BaseDatasetLabelledPerPid(Dataset):
     def __init__(self, data, transform=None, num_instances=4, resample=False):
         self.samples = data
+        self.unseen = {pid: set(range(len(values))) for pid, values in self.samples.items()}
         self.transform = transform
         self.num_instances = num_instances
         self.resample = resample
@@ -389,13 +393,17 @@ class BaseDatasetLabelledPerPid(Dataset):
             num_instace of given pid
         """
         pid = int(pid)
-        list_of_samples = self.samples[pid][
-            :
-        ]  # path, target, camid, idx <- in each inner tuple
+
+        list_of_samples = self.unseen[pid]
         _len = len(list_of_samples)
+
+        if _len <= 1:
+            self.unseen[pid] = set(range(len(self.samples[pid])))
+            list_of_samples = self.unseen[pid]
+            _len = len(list_of_samples)
         assert (
             _len > 1
-        ), f"len of samples for pid: {pid} is <=1. len: {len_}, samples: {list_of_samples}"
+        ), f"len of samples for pid: {pid} is <=1. len: {_len}, samples: {list_of_samples}"
 
         if _len < self.num_instances:
             choice_size = _len
@@ -404,12 +412,13 @@ class BaseDatasetLabelledPerPid(Dataset):
             choice_size = self.num_instances
             needPad = False
 
-        # We shuffle self.samples[pid] as we extract instances from this dict directly
-        random.shuffle(self.samples[pid])
+        # We randomly sample choice_size instances from list of unseen indices
+        output_sample = random.sample(list_of_samples, choice_size)
 
         out = []
-        for _ in range(choice_size):
-            tup = self.samples[pid].pop(0)
+        for tup_index in output_sample:
+            self.unseen[pid].remove(tup_index)
+            tup = self.samples[pid][tup_index]
             path, target, camid, idx = tup
             img = self.prepare_img(path)
             out.append(
@@ -424,10 +433,10 @@ class BaseDatasetLabelledPerPid(Dataset):
             if self.resample:
                 assert len(list_of_samples) > 0
                 resampled = np.random.choice(
-                    range(len(list_of_samples)), size=num_missing, replace=True
+                    list_of_samples, size=num_missing, replace=True
                 )
                 for idx in resampled:
-                    path, target, camid, idx = list_of_samples[idx]
+                    path, target, camid, idx = self.samples[pid][idx]
                     img = self.prepare_img(path)
                     out.append((img, target, camid, idx, True))
             else:

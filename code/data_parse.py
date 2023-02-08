@@ -12,16 +12,16 @@ from collections import defaultdict
 
 class Debug:
     def __init__(self):
-        self.out = open("/home/george/code/logs.txt", "w")
+        self.out = open("/home/georgez/centroids-reid/code/logs.txt", "w")
     def print(self, msg):
         self.out.write(msg + "\n")
 
 class Parser:
     def __init__(self):
-        self.match_data = "/home/george/datasets/appearance-search-dedup/"
-        self.video_data = "/home/george/datasets/people-tracking-videos/"
+        self.match_data = "/home/georgez/datasets/appearance-search-dedup/"
+        self.video_data = "/home/georgez/datasets/people-tracking-videos/"
         self.framespervid = 5
-        self.output = "/home/george/datasets/verkada_data/"
+        self.output = "/home/georgez/datasets/verkada_data/"
         self.debug = Debug()
         self.testsplit = 0.2
 
@@ -117,7 +117,7 @@ class Parser:
         anno_dir = self.video_data + "releases/latest/annotations/"
 
         for file in os.listdir(anno_dir):
-            cid = file[4:-5]
+            cid = file[5:-5]
 
             with open(anno_dir + file) as anno_file:
                 anno_json = json.load(anno_file)
@@ -129,11 +129,12 @@ class Parser:
                     if type == 'person':
                         self.cam2anno[cid].append(aid)
                         if aid not in self.anno_info:
-                            self.anno_info[aid] = {'pid': self.pid, 'camera': 1}
+                            self.anno_info[aid] = {'pid': self.pid}
                             self.pid2anno[self.pid] = [aid]
                             self.pid += 1
 
                         self.anno_info[aid]['folder'] = file[:-5]
+                        self.anno_info[aid]['cid'] = cid
         
         length = 0
         longestid = 0
@@ -148,40 +149,69 @@ class Parser:
                 cam += 1
         print("Longest id: " + str(longestid) + " with annos: " + str(length))
         
-        keys = None
-        threshold_met = False
-        ratio = int(len(self.cam2anno) * self.testsplit)
-        threshold = int(len(self.anno_info) * self.testsplit)
-        print("Total number of annotations: " + str(len(self.anno_info)))
-        print("Total number of identities: " + str(self.pid))
-
-        while not threshold_met:
-            keys = random.sample(self.cam2anno.keys(), ratio)
-            estimate = 0
-            for i in keys:
-                estimate += len(self.cam2anno[i])
-            if estimate < (threshold + 2000) and estimate > (threshold - 2000):
-                threshold_met = True
-                print("Approx frames in test, train: " + str(estimate * 5) + ", " + str((len(self.anno_info)-estimate)*5))
-        
-        keys = set(keys)
+        camids = self.groupingHelper(longestid)
         self.train = self.output + "bounding_box_train/"
         self.test = self.output + "bounding_box_test/"
         self.query = self.output + "query/"
         os.mkdir(self.train)
         os.mkdir(self.test)
         os.mkdir(self.query)
-        print("Cameras in test, train: " + str(len(keys)) + ", " + str(len(self.cam2anno)-len(keys)))
+        print("Cameras in test, train: " + str(len(camids)) + ", " + str(len(self.cam2anno)-len(camids)))
 
         for cid in self.cam2anno:
             for anno in self.cam2anno[cid]:
                 if anno in self.pid2anno[longestid]:
                     continue
-                if cid in keys:
+                if cid in camids:
                     self.extract_frames(anno, self.test)
                 else:
                     self.extract_frames(anno, self.train)
 
+
+    def groupingHelper(self, longestid):
+        test_cams = set()
+        all_cams = set(self.cam2anno.keys())
+        threshold_met = False
+        count = 0
+        threshold = int(len(self.anno_info) * self.testsplit)
+        print("Total number of annotations: " + str(len(self.anno_info)))
+        print("Total number of identities: " + str(self.pid))
+
+        while not threshold_met:
+            cur_cams = set([all_cams.pop()])
+            
+            while cur_cams:
+                cur_cam = cur_cams.pop()
+                test_cams.add(cur_cam)
+                count += len(self.cam2anno[cur_cam])
+
+                for anno in self.cam2anno[cur_cam]:
+                    if anno in self.pid2anno[longestid]:
+                        count -= 1
+                        continue
+
+                    pid = self.anno_info[anno]['pid']
+                    for panno in self.pid2anno[pid]:
+                        try:
+                            cam = self.anno_info[panno]['cid']
+                        except:
+                            continue
+                        if cam in all_cams:
+                            all_cams.remove(cam)
+                            cur_cams.add(cam)
+            
+            if count < threshold + 500 and count > threshold - 500:
+                threshold_met = True
+            elif count > threshold + 500:
+                print(count)
+                print(threshold)
+                count = 0
+                all_cams = set(self.cam2anno.keys())
+                test_cams = set()
+
+        print("Approx frames in test, train: " + str(count * 5) + ", " + str((len(self.anno_info)-count)*5))
+        return test_cams
+        
 
     def parse(self):
         """

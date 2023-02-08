@@ -60,11 +60,13 @@ _C.INPUT.PADDING = 10
 # -----------------------------------------------------------------------------
 _C.DATASETS = CN()
 # List of the dataset names for training, as present in paths_catalog.py
-_C.DATASETS.NAMES = ""
+_C.DATASETS.NAMES = []
 # Root directory where datasets should be used (and downloaded if not found)
 _C.DATASETS.ROOT_DIR = ""
 # Path to json train file for datasets that require it
 _C.DATASETS.JSON_TRAIN_PATH = ""
+# Number of images per batch per GPU per dataset, should add up to SOLVER.IMS_PER_BATCH
+_C.DATASETS.BATCH_SIZE = []
 
 # -----------------------------------------------------------------------------
 # DATALOADER

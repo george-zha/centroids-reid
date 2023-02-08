@@ -1,6 +1,6 @@
 python3 train_ctl_model.py \
 --config_file="configs/256_resnet50.yml" \
---dataset="market1501" \
+DATASETS.NAMES 'market1501' \
 GPU_IDS [0] \
 DATASETS.ROOT_DIR '/home/georgez/datasets' \
 SOLVER.IMS_PER_BATCH 16 \

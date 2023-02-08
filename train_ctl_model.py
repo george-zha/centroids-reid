@@ -184,9 +184,6 @@ if __name__ == "__main__":
         "--config_file", default="", help="path to config file", type=str
     )
     parser.add_argument(
-        "--dataset", help="path to config file", action='append'
-    )
-    parser.add_argument(
         "opts",
         help="Modify config options using the command-line",
         default=None,
@@ -194,12 +191,28 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    sizes, names = [], []
+    for i,j in enumerate(args.opts):
+        ind = i + 1
+        if j == 'DATASETS.NAMES':
+            while type(args.opts[ind]) == str and args.opts[ind].islower():
+                names.append(args.opts[ind])
+                args.opts.pop(ind)
+            args.opts.insert(ind, names)
+        
+        elif j == 'DATASETS.BATCH_SIZE':
+            while type(args.opts[ind]) == str and args.opts[ind].isdigit():
+                sizes.append(int(args.opts[ind]))
+                args.opts.pop(ind)
+            args.opts.insert(ind, sizes)
 
     if args.config_file != "":
         cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
-    cfg.DATASETS.NAMES = args.dataset
+
+    if not sizes:
+        cfg.DATASETS.BATCH_SIZE = [cfg.SOLVER.IMS_PER_BATCH]
 
     logger_save_dir = f"{Path(__file__).stem}"
-
+    
     run_main(cfg, CTLModel, logger_save_dir)

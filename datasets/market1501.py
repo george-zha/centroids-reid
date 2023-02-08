@@ -87,8 +87,4 @@ class VerkadaData(Market1501):
             dataset_dict[pid].append((img_path, pid, camid, idx))
 
         return dataset, dataset_dict 
-
-
-class CombinedData(VerkadaData):
-    dataset_dir = 'combined_data'
     

@@ -144,6 +144,7 @@ logs/
 models/
 experiments/
 mlruns/
+train_scripts/
 *.pyc
 debugs/
 *.c
