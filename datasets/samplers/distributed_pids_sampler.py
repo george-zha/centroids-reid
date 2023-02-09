@@ -62,7 +62,7 @@ class RandomIdentitySampler(Sampler):
 
         # Ensure we iterate through all pids before exiting
         while len(avai_pids) >= self.batch_size * self.world_size:
-            
+
             for i,dataset_size in enumerate(self.dataset_sizes):
                 batch_idxs_dict = batch_idxs_datasets[i]
                 selected_pids = random.sample(batch_idxs_dict.keys(), dataset_size * self.world_size)
