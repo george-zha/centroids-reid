@@ -128,7 +128,6 @@ def run_single(cfg, method, logger_save_dir):
             cfg.MODEL.PRETRAIN_PATH,
             cfg=cfg,
             num_query=dm.num_query,
-            num_classes=dm.num_classes,
             use_multiple_loggers=True if len(loggers) > 1 else False,
         )
         trainer.test(model=method, test_dataloaders=[val_dataloader])

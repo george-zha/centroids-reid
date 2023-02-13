@@ -423,8 +423,7 @@ class BaseDatasetLabelledPerPid(Dataset):
         out = []
         for tup_index in output_sample:
             self.unseen[pid].remove(tup_index)
-            tup = self.samples[pid][tup_index]
-            path, target, camid, idx = tup
+            path, target, camid, idx = self.samples[pid][tup_index]
             img = self.prepare_img(path)
             out.append(
                 (img, target, camid, idx, True)
@@ -441,9 +440,9 @@ class BaseDatasetLabelledPerPid(Dataset):
                     list_of_samples, size=num_missing, replace=True
                 )
                 for idx in resampled:
-                    path, target, camid, idx = self.samples[pid][idx]
+                    path, target, camid, pidx = self.samples[pid][idx]
                     img = self.prepare_img(path)
-                    out.append((img, target, camid, idx, True))
+                    out.append((img, target, camid, pidx, True))
             else:
                 img_mock = torch.zeros_like(img)
                 for _ in range(num_missing):

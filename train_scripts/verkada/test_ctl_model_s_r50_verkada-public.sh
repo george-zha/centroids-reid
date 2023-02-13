@@ -9,4 +9,5 @@ SOLVER.BASE_LR 0.00035 \
 OUTPUT_DIR './logs/market1501/verkada_test' \
 SOLVER.EVAL_PERIOD 40 \
 TEST.ONLY_TEST True \
-MODEL.PRETRAIN_PATH './logs/verkada_data/train_ctl_model/version_18/checkpoints/last.ckpt'
+MODEL.PRETRAIN_PATH './logs/verkada_data/last.ckpt' \
+OUTPUT_DIR './logs/verkada/'

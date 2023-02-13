@@ -20,8 +20,8 @@ class Parser:
     def __init__(self):
         self.match_data = "/home/georgez/datasets/appearance-search-dedup/"
         self.video_data = "/home/georgez/datasets/people-tracking-videos/"
-        self.framespervid = 5
-        self.output = "/home/georgez/datasets/verkada_data/"
+        self.framesperpid = 5
+        self.output = "/home/georgez/datasets/verkada_data_limitedquery/"
         self.debug = Debug()
         self.testsplit = 0.2
 
@@ -53,7 +53,7 @@ class Parser:
 
     def extract_frames(self, anno_id, out):
         """
-        Takes self.framespervid number of random frames from specified annotation file and id
+        Takes self.framesperpid number of random frames from specified annotation file and id
 
         path: folder to save frames to
         filename: annotation file

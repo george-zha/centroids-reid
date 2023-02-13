@@ -6,5 +6,5 @@ DATASETS.ROOT_DIR '/home/georgez/datasets/' \
 SOLVER.IMS_PER_BATCH 16 \
 TEST.IMS_PER_BATCH 128 \
 SOLVER.BASE_LR 0.00035 \
-OUTPUT_DIR './logs/dukemtmcreid/256_resnet50' \
+OUTPUT_DIR './logs/dukemtmcreid/' \
 DATALOADER.USE_RESAMPLING False

@@ -16,7 +16,7 @@ sys.path.append(".")
 from config import cfg
 from train_ctl_model import CTLModel
 
-PATH = "resnet50_model.pt"
-cfg.MODEL.PRETRAIN_PATH = '/home/george/centroids-reid/epoch=119.ckpt'
+PATH = "/home/georgez/centroids-reid/experiments/verkada-model-resnet50.pt"
+cfg.MODEL.PRETRAIN_PATH = '/home/georgez/centroids-reid/logs/verkada_data/train_ctl_model/version_18/checkpoints/last.ckpt'
 model = CTLModel.load_from_checkpoint(cfg.MODEL.PRETRAIN_PATH)
 torch.save(model.state_dict(), PATH)

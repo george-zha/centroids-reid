@@ -9,4 +9,5 @@ SOLVER.BASE_LR 0.00035 \
 OUTPUT_DIR './logs/market1501/256_resnet50/' \
 SOLVER.EVAL_PERIOD 40 \
 TEST.ONLY_TEST True \
-MODEL.PRETRAIN_PATH "logs/market1501/256_resnet50/train_ctl_model/version_0/checkpoints/epoch=119.ckpt"
+MODEL.PRETRAIN_PATH "logs/market1501/256_resnet50/train_ctl_model/version_0/checkpoints/epoch=119.ckpt" \
+OUTPUT_DIR './logs/market1501/'

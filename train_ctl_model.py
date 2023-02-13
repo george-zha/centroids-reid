@@ -212,7 +212,8 @@ if __name__ == "__main__":
 
     if not sizes:
         cfg.DATASETS.BATCH_SIZE = [cfg.SOLVER.IMS_PER_BATCH]
+    assert (sum(cfg.DATASETS.BATCH_SIZE) == cfg.SOLVER.IMS_PER_BATCH), "batch balancing not equal to batch size!"
 
-    logger_save_dir = f"{Path(__file__).stem}"
-    
+    logger_save_dir = "test" if cfg.TEST.ONLY_TEST else f"{Path(__file__).stem}"
+
     run_main(cfg, CTLModel, logger_save_dir)
