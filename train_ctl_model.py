@@ -38,8 +38,14 @@ class CTLModel(ModelBase):
         ]
         self.losses_dict = {n: [] for n in self.losses_names}
 
-    def forward(self, batch):
-        return _inference(self, batch, use_cuda=False)
+    def forward(self, data, use_cuda=False):
+        self.eval()
+        with torch.no_grad():
+            _, global_feat = self.backbone(
+                data.cuda() if use_cuda else data
+            )
+            global_feat = self.bn(global_feat)
+        return global_feat
 
     def training_step(self, batch, batch_idx, optimizer_idx=None):
         opt, opt_center = self.optimizers(use_pl_optimizer=True)

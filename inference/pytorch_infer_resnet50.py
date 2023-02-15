@@ -1,7 +1,7 @@
 import argparse
 import logging
 import os
-import time
+from time import time
 import torch
 import torch_neuron
 import json
@@ -10,10 +10,15 @@ import numpy as np
 
 from pathlib import Path
 from urllib import request
-from torchvision import models, transforms, datasets
+
+from PIL import Image
+from torch.utils.data import DataLoader, Dataset
+from torchvision.datasets import ImageFolder
+from torchvision.datasets.folder import is_image_file
 
 sys.path.append(".")
 
+from datasets.transforms import ReidTransforms
 from config import cfg
 from train_ctl_model import CTLModel
 from utils.reid_metric import get_dist_func
@@ -26,129 +31,41 @@ from inference_utils import (
     run_inference,
 )
 
+CONFIG = '/home/ubuntu/centroids-reid/configs/256_resnet50_inference.yml'
+QUERY_DATA = '/home/ubuntu/datasets/inference/query/'
+GALLERY_DATA = '/home/ubuntu/datasets/inference/gallery/'
+
 ### Prepare logging
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 log = logging.getLogger(__name__)
 
-### Functions used to extract pair_id
-exctract_func = (
-    lambda x: (x).rsplit(".", 1)[0].rsplit("_", 1)[0]
-)  ## To extract pid from filename. Example: /path/to/dir/product001_04.jpg -> pid = product001
+cfg.merge_from_file(CONFIG)
 
-# exctract_func = lambda x: Path(
-#     x
-# ).parent.name  ## To extract pid from parent directory of an iamge. Example: /path/to/root/001/image_04.jpg -> pid = 001
+### Data preparation
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Create embeddings for images that will serve as the database (gallery)"
-    )
-    parser.add_argument(
-        "--config_file", default="", help="path to config file", type=str
-    )
-    parser.add_argument(
-        "--print_freq",
-        help="number of batches the logging message is printed",
-        type=int,
-        default=10,
-    )
-    parser.add_argument(
-        "--gallery_data",
-        help="path to gallery images",
-        type=str,
-    )    
-    parser.add_argument(
-        "--query_data",
-        help="path to query images",
-        type=str,
-    )
-    parser.add_argument(
-        "--normalize_features",
-        help="whether to normalize the gallery and query embeddings",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--topk",
-        help="number of top k similar ids to return per query. If set to 0 all ids per query will be returned",
-        type=int,
-        default=100,
-    )
-    parser.add_argument(
-        "opts",
-        help="Modify config options using the command-line",
-        default=None,
-        nargs=argparse.REMAINDER,
-    )
-    args = parser.parse_args()
-    if args.config_file != "":
-        cfg.merge_from_file(args.config_file)
-    cfg.merge_from_list(args.opts)
+log.info(f"Preparing query and gallery dataloaders")
+gallery_loader = make_inference_data_loader(cfg, GALLERY_DATA, ImageDataset)
+query_loader = make_inference_data_loader(cfg, QUERY_DATA, ImageDataset)
 
+if len(gallery_loader) == 0 or len(query_loader) == 0:
+    raise RuntimeError("Length of dataloader = 0")
 
-    ### Data preparation
-    dataset_type = ImageDataset
-    log.info(f"Preparing data using {dataset_type} dataset class")
-    val_loader = make_inference_data_loader(cfg, args.gallery_data, dataset_type)
-    if len(val_loader) == 0:
-        raise RuntimeError("Length of dataloader = 0")
+## Load model
+model_neuron = torch.jit.load(cfg.MODEL.PRETRAIN_PATH)
 
-    ## Load model
-    model_neuron = torch.jit.load(cfg.MODEL.PRETRAIN_PATH)
-
-    ### Inference
-    log.info("Running inference on gallery")
-    embeddings, paths = run_inference(
-        model_neuron, val_loader, cfg, print_freq=args.print_freq, use_cuda=False
-    )
-
-    ### Create centroids
-    log.info("Creating centroids")
-    if cfg.MODEL.USE_CENTROIDS:
-        pid_path_index = create_pid_path_index(paths=paths, func=exctract_func)
-        embeddings_gallery, paths_gallery = calculate_centroids(embeddings, pid_path_index)
-
-    ### Inference
-    val_loader = make_inference_data_loader(cfg, args.query_data, dataset_type)
-
-    log.info("running inference on query")
-    embeddings_query, paths_query = run_inference(
-        model_neuron, val_loader, cfg, print_freq=args.print_freq, use_cuda=False
-    )
-
-    if args.normalize_features:
-        embeddings_gallery = torch.nn.functional.normalize(
-            embeddings_gallery, dim=1, p=2
-        )
-        embeddings = torch.nn.functional.normalize(
-            torch.from_numpy(embeddings), dim=1, p=2
-        )
-    else:
-        embeddings = torch.from_numpy(embeddings)
-    
-    ### Calculate similarity
-    log.info("Calculating distance and getting the most similar ids per query")
-    dist_func = get_dist_func(cfg.SOLVER.DISTANCE_FUNC)
-    distmat = dist_func(x=embeddings_query, y=embeddings_gallery).cpu().numpy()
-    indices = np.argsort(distmat, axis=1)
-
-    ### Constrain the results to only topk most similar ids
-    indices = indices[:, : args.topk] if args.topk else indices
-
-    out = {
-        query_path: {
-            "indices": indices[q_num, :],
-            "paths": paths_gallery[indices[q_num, :]],
-            "distances": distmat[q_num, indices[q_num, :]],
-        }
-        for q_num, query_path in enumerate(paths)
-    }
-
-    ### Save
-    SAVE_DIR = Path(cfg.OUTPUT_DIR)
-    SAVE_DIR.mkdir(exist_ok=True, parents=True)
-
-    log.info(f"Saving results to {str(SAVE_DIR)}")
-    np.save(SAVE_DIR / "results.npy", out)
-    np.save(SAVE_DIR / "query_embeddings.npy", embeddings.cpu())
-    np.save(SAVE_DIR / "query_paths.npy", paths)
-
+### Inference
+latency = []
+log.info("Running inference on gallery")
+gallery_embeddings = []
+while len(gallery_embeddings) < 100:
+    for img in gallery_loader:
+        delta_start = time()
+        embedding = model_neuron(img[0])
+        delta = time()-delta_start
+        latency.append(delta)
+        gallery_embeddings.append(embedding)
+print("number of iterations: " + str(len(gallery_embeddings)))
+print("Latency P50: {:.0f}".format(np.percentile(latency, 50)*1000.0))
+print("Latency P90: {:.0f}".format(np.percentile(latency, 90)*1000.0))
+print("Latency P95: {:.0f}".format(np.percentile(latency, 95)*1000.0))
+print("Latency P99: {:.0f}\n".format(np.percentile(latency, 99)*1000.0))
