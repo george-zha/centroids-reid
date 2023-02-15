@@ -1,0 +1,30 @@
+# Update OS packages
+sudo apt-get update -y
+
+################################################################################################################
+# To install or update to Neuron versions 1.19.1 and newer from previous releases:
+# - DO NOT skip 'aws-neuron-dkms' install or upgrade step, you MUST install or upgrade to latest Neuron driver
+################################################################################################################
+
+# Update OS headers
+sudo apt-get install linux-headers-$(uname -r) -y
+
+# Update Neuron Driver
+sudo apt-get install aws-neuronx-dkms --allow-change-held-packages -y
+
+####################################################################################
+# Warning: If Linux kernel is updated as a result of OS package update
+#          Neuron driver (aws-neuron-dkms) should be re-installed after reboot
+####################################################################################
+
+# Update Neuron Tools
+sudo apt-get install aws-neuronx-tools -y
+
+# Activate PyTorch
+source activate 
+
+# Set Pip repository  to point to the Neuron repository
+pip config set global.extra-index-url https://pip.repos.neuron.amazonaws.com
+
+#Update Neuron PyTorch
+pip install --upgrade torch-neuron neuron-cc[tensorflow] "protobuf==3.20.1" torchvision

@@ -86,6 +86,21 @@ class ImageDataset(Dataset):
         )  ## Hack to be consistent with ImageFolderWithPaths dataset
 
 
+# class InferenceDataset(ImageDataset):
+#     def __init__(self, cfg, dataset: str, loader=pil_loader):
+#         transforms_base = ReidTransforms(cfg)
+#         self.transform = transforms_base.build_transforms(is_train=False)
+#         self.loader = loader
+#         self.dataset = get_all_images(dataset)
+
+    
+#     def __getitem__(self, index):
+#         img_path = self.dataset[index]
+#         img = self.loader(img_path)
+#         img = self.transform(img)
+#         return img
+
+
 def make_inference_data_loader(cfg, path, dataset_class):
     transforms_base = ReidTransforms(cfg)
     val_transforms = transforms_base.build_transforms(is_train=False)
@@ -110,7 +125,6 @@ def _inference(model, batch, use_cuda, normalize_with_bn=True):
         if normalize_with_bn:
             global_feat = model.bn(global_feat)
         return global_feat, filename
-
 
 def run_inference(model, val_loader, cfg, print_freq, use_cuda):
     embeddings = []
