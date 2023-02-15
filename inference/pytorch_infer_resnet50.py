@@ -1,20 +1,10 @@
-import argparse
 import logging
 import os
 from time import time
 import torch
 import torch_neuron
-import json
 import sys
 import numpy as np
-
-from pathlib import Path
-from urllib import request
-
-from PIL import Image
-from torch.utils.data import DataLoader, Dataset
-from torchvision.datasets import ImageFolder
-from torchvision.datasets.folder import is_image_file
 
 sys.path.append(".")
 
