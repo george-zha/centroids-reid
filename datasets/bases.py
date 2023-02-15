@@ -62,9 +62,9 @@ class ReidBaseDataModule(pl.LightningDataModule):
         self.gallery_list = []
 
         for dataset in self.datasets:
-            num_train_pids = 0 if not self.train_dict else max(self.train_dict.keys())
-            num_query_pids = 0 if not self.query_dict else max(self.query_dict.keys())
-            num_gallery_pids = 0 if not self.gallery_dict else max(self.gallery_dict.keys())
+            num_train_pids = 0 if not self.train_dict else max(self.train_dict.keys()) + 1
+            num_query_pids = 0 if not self.query_dict else max(self.query_dict.keys()) + 1
+            num_gallery_pids = 0 if not self.gallery_dict else max(self.gallery_dict.keys()) + 1
 
             train ,train_dict = dataset._process_dir(dataset.train_dir, reindex=num_train_pids, relabel=True)
             query, query_dict = dataset._process_dir(dataset.query_dir, reindex=num_query_pids, relabel=False)

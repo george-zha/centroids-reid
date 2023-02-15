@@ -67,7 +67,6 @@ class ImageFolderWithPaths(ImageFolder):
 class ImageDataset(Dataset):
     def __init__(self, dataset: str, transform=None, loader=pil_loader):
         self.dataset = get_all_images(dataset)
-        print(self.dataset)
         self.transform = transform
         self.loader = loader
 
