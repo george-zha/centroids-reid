@@ -16,13 +16,14 @@ PERSON = 'person'
 BLOBLOCATION = 'blobLocation'
 ORIGKEY = 'origKey'
 BUCKET = 'bucket'
-DOWNLOADPATH = '/home/george/datasets/hyperzoom_data/'
-TMPFOLDER = '/home/george/mtmp/'
+DOWNLOADPATH = '/home/ubuntu/datasets/hyperzoom_data/'
+TMPFOLDER = '/home/ubuntu/mtmp/'
 
+boto3.setup_default_session(profile_name='prod1')
 s3 = boto3.resource('s3')
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table('vsubmit_device_timeseries.prod1')
-
+os.mkdir(DOWNLOADPATH)
 
 def hz_by_device(d_ids):
     """
@@ -94,6 +95,6 @@ def bucket_download(bloblocs):
         shutil.rmtree(TMPFOLDER)
         print("Downloaded all from device: " + device_id)
 
-camera_csv = pd.read_csv('/home/george/vcamera_public_cameras.csv', usecols=[0], header=None)
+camera_csv = pd.read_csv('/home/ubuntu/vcamera_public_cameras.csv', usecols=[0], header=None)
 d_ids = camera_csv[0].values
 hz_by_device(d_ids)

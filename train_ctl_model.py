@@ -22,9 +22,6 @@ from tqdm import tqdm
 from config import cfg
 from modelling.bases import ModelBase
 from utils.misc import run_main
-from inference.inference_utils import (
-    ImageDataset, make_inference_data_loader, _inference
-)
 
 
 class CTLModel(ModelBase):

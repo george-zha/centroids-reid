@@ -13,7 +13,7 @@ sys.path.append(".")
 from config import cfg
 from train_ctl_model import CTLModel
 
-MODEL = '/home/ubuntu/centroids-reid/verkada-model-resnet50.pt'
+MODEL = '/home/ubuntu/centroids-reid/models/verkada-model-resnet50.pt'
 CONFIG = '/home/ubuntu/centroids-reid/configs/256_resnet50_inference.yml'
 
 ## Load a pretrained ResNet50 model
@@ -29,7 +29,7 @@ model.load_state_dict(torch.load(MODEL, map_location=device))
 
 ## Tell the model we are using it for evaluation (not training)
 model.eval()
-model_neuron = torch.neuron.trace(model, example_inputs=[image])
+model_neuron = torch.neuron.trace(model, example_inputs=[image], dynamic_batch_size=True)
 
 ## Export to saved model
-model_neuron.save("verkada-neuron-resnet50.pt")
+model_neuron.save("/home/ubuntu/centroids-reid/models/verkada-neuron-resnet50.pt")

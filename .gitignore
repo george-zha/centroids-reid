@@ -143,6 +143,9 @@ tb_logs/
 logs/
 models/
 experiments/
+results/
+tmp/
+pytorch_venv/
 mlruns/
 train_scripts/
 *.pyc
