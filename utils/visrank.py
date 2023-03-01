@@ -240,5 +240,12 @@ def visualize_ranked_results(
 
         if q_idx >= int(cfg.TEST.VISUALIZE_MAX_NUMBER):
             break
+    
+    vis_arr = []
+    for vis in os.listdir(save_dir)[:10]:
+        visimg = cv2.imread(os.path.join(save_dir, vis))
+        vis_arr.append(visimg)
+    outimg = np.concatenate(vis_arr, axis=0)
+    cv2.imwrite(os.path.join(cfg.OUTPUT_DIR, "grid_visualization.png"), outimg)
 
     print('Done. Images have been saved to "{}" ...'.format(save_dir))

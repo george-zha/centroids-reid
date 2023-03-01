@@ -109,7 +109,7 @@ class R1_mAP:
             results.append(distmat_temp)
         return np.hstack(results)
 
-    def compute(self, feats, pids, camids, respect_camids=False):
+    def compute(self, feats, pids, camids, threshold, respect_camids=False):
         if self.feat_norm:
             print("The test feature is normalized")
             feats = torch.nn.functional.normalize(feats, dim=1, p=2)
@@ -130,9 +130,9 @@ class R1_mAP:
         else:
             distmat = self.dist_func(x=qf, y=gf)
             indices = np.argsort(distmat, axis=1)
-
-        cmc, mAP, all_topk, single_performance = eval_func(
-            indices, q_pids, g_pids, q_camids, g_camids, 50, respect_camids
+        
+        cmc, mAP, all_topk, single_performance, precision = eval_func(
+            indices, distmat, q_pids, g_pids, q_camids, g_camids, threshold, 50, respect_camids
         )
 
         if self.hparms.TEST.VISUALIZE == "yes":
@@ -148,4 +148,4 @@ class R1_mAP:
                 topk=self.hparms.TEST.VISUALIZE_TOPK,
             )
 
-        return cmc, mAP, all_topk
+        return cmc, mAP, all_topk, precision

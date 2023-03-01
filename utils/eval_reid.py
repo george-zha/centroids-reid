@@ -9,7 +9,7 @@ Adapted and extended by:
 """
 
 import numpy as np
-
+import torch
 from tqdm import tqdm
 
 k_list = [1, 5, 10, 20, 50]
@@ -23,7 +23,7 @@ def top_k_retrieval(row_matches: np.ndarray, k: list):
 
 
 def eval_func(
-    indices, q_pids, g_pids, q_camids, g_camids, max_rank=50, respect_camids=False
+    indices, distmat, q_pids, g_pids, q_camids, g_camids, threshold, max_rank=50, respect_camids=False
 ):
     """
     Evaluation with market1501 metric
@@ -39,8 +39,11 @@ def eval_func(
     all_cmc = []
     all_AP = []
     num_valid_q = 0.0  # number of valid query
+    correct_under_t = 0
+    total_under_t = 0
     topk_results = []  # Store topk retureval
     single_performance = []
+
     for q_idx in tqdm(range(num_q)):
         # get query pid and camid
         q_pid = q_pids[q_idx]
@@ -69,6 +72,8 @@ def eval_func(
 
         all_cmc.append(cmc[:max_rank])
         num_valid_q += 1.0
+        correct_under_t += torch.sum((distmat[q_idx][order] < threshold) & matches[q_idx])
+        total_under_t += torch.sum(distmat[q_idx][order] < threshold)
 
         # compute average precision
         # reference: https://en.wikipedia.org/wiki/Evaluation_measures_(information_retrieval)#Average_precision
@@ -88,5 +93,6 @@ def eval_func(
     mAP = np.mean(all_AP)
     all_topk = np.vstack(topk_results)
     all_topk = np.mean(all_topk, 0)
+    precision = -1 if not total_under_t else correct_under_t / total_under_t
 
-    return all_cmc, mAP, all_topk, np.array(single_performance)
+    return all_cmc, mAP, all_topk, np.array(single_performance), precision

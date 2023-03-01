@@ -76,8 +76,8 @@ class Parser:
                 seg_start = -(anno['segments'][0][0] // -10)
                 seg_end = anno['segments'][0][1] // 10
 
-                if seg_end - seg_start > self.framespervid:
-                    frames = random.sample(range(seg_start, seg_end), self.framespervid) 
+                if seg_end - seg_start > self.framesperpid:
+                    frames = random.sample(range(seg_start, seg_end), self.framesperpid) 
                 else:
                     frames = range(seg_start, seg_end)
 
@@ -158,14 +158,17 @@ class Parser:
         os.mkdir(self.query)
         print("Cameras in test, train: " + str(len(camids)) + ", " + str(len(self.cam2anno)-len(camids)))
 
-        for cid in self.cam2anno:
-            for anno in self.cam2anno[cid]:
-                if anno in self.pid2anno[longestid]:
-                    continue
-                if cid in camids:
-                    self.extract_frames(anno, self.test)
-                else:
-                    self.extract_frames(anno, self.train)
+        with open('evalanno.txt', 'w') as evalfile, open('trainanno.txt', 'w') as trainfile:
+            for cid in self.cam2anno:
+                for anno in self.cam2anno[cid]:
+                    if anno in self.pid2anno[longestid]:
+                        continue
+                    if cid in camids:
+                        evalfile.write(anno+'\n')
+                        self.extract_frames(anno, self.test)
+                    else:
+                        self.extract_frames(anno, self.train)
+                        trainfile.write(anno+'\n')
 
 
     def groupingHelper(self, longestid):
@@ -223,7 +226,7 @@ class Parser:
         anno2pid = {}
         pid = 0
         anno_dir = self.match_data + "releases/latest/annotations/"
-        random.seed()
+        random.seed(10)
 
         for filename in sorted(os.listdir(anno_dir)):
             with open(anno_dir + filename) as anno_file:

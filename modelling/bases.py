@@ -278,10 +278,11 @@ class ModelBase(pl.LightningModule):
             )
             else False
         )
-        cmc, mAP, all_topk = self.r1_map_func.compute(
+        cmc, mAP, all_topk, precision = self.r1_map_func.compute(
             feats=embeddings.float(),
             pids=labels,
             camids=camids,
+            threshold=self.hparams.TEST.THRESHOLD,
             respect_camids=respect_camids,
         )
 
@@ -290,6 +291,7 @@ class ModelBase(pl.LightningModule):
             print("top-k, Rank-{:<3}:{:.1%}".format(kk, top_k))
             topks[f"Top-{kk}"] = top_k
         print(f"mAP: {mAP}")
+        print(f"Precision at {self.hparams.TEST.THRESHOLD} threshold: {precision}")
 
         log_data = {"mAP": mAP}
 
