@@ -67,7 +67,7 @@ class Market1501():
 
 
 class VerkadaData(Market1501):
-    dataset_dir = 'verkada_data_limitedquery'
+    dataset_dir = 'verkada_data'
 
     def _process_dir(self, dir_path, reindex=0, relabel=False):
         img_paths = glob.glob(osp.join(dir_path, '*.jpg'))

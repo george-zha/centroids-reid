@@ -160,7 +160,13 @@ _C.TEST.VISUALIZE_TOPK = 10
 # Max number of query images plotted
 _C.TEST.VISUALIZE_MAX_NUMBER = 1000000
 # Distance threshold for reporting search precision
-_C.TEST.THRESHOLD = 0.4
+_C.TEST.THRESHOLD = 0.8
+# Print list of queries and errors at given TEST.THRESHOLD
+_C.TEST.PRINT_ERRORS = "no"
+# Path to attribute model for evaluation result filtering
+_C.TEST.ATTRIBUTE_MODEL = None
+# Distance threshold for attribute model to filter results
+_C.TEST.ATTRIBUTE_THRESHOLD = None
 
 # ---------------------------------------------------------------------------- #
 # MISC

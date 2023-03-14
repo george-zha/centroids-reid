@@ -27,6 +27,7 @@ IMG_EXTENSIONS = (
 )
 
 
+
 def pil_loader(path: str) -> Image.Image:
     # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
     with open(path, "rb") as f:
@@ -65,9 +66,10 @@ class ImageFolderWithPaths(ImageFolder):
 
 
 class ImageDataset(Dataset):
-    def __init__(self, dataset: str, transform=None, loader=pil_loader):
+    def __init__(self, dataset: str, transform=None, attr_transform=None, loader=pil_loader):
         self.dataset = get_all_images(dataset)
         self.transform = transform
+        self.attr_transform = attr_transform
         self.loader = loader
 
     def __len__(self):
@@ -76,12 +78,15 @@ class ImageDataset(Dataset):
     def __getitem__(self, index):
         img_path = self.dataset[index]
         img = self.loader(img_path)
+        attr_img = self.loader(img_path)
 
         if self.transform is not None:
             img = self.transform(img)
+        if self.attr_transform is not None:
+            attr_img = self.attr_transform(attr_img)
         return (
             img,
-            "",
+            attr_img,
             img_path,
         )  ## Hack to be consistent with ImageFolderWithPaths dataset
 
@@ -104,6 +109,20 @@ class ImageDataset(Dataset):
 def make_inference_data_loader(cfg, path, dataset_class):
     transforms_base = ReidTransforms(cfg)
     val_transforms = transforms_base.build_transforms(is_train=False)
+    attr_transforms = transforms_base.build_attr_transforms()
+    num_workers = cfg.DATALOADER.NUM_WORKERS
+    val_set = dataset_class(path, val_transforms, attr_transforms)
+    val_loader = DataLoader(
+        val_set,
+        batch_size=cfg.TEST.IMS_PER_BATCH,
+        shuffle=False,
+        num_workers=num_workers,
+    )
+    return val_loader
+
+def attr_dataloader(cfg, path, dataset_class):
+    transforms_base = ReidTransforms(cfg)
+    val_transforms = transforms_base.build_attr_transforms()
     num_workers = cfg.DATALOADER.NUM_WORKERS
     val_set = dataset_class(path, val_transforms)
     val_loader = DataLoader(
@@ -126,14 +145,12 @@ def _inference(model, batch, use_cuda, normalize_with_bn=True):
             global_feat = model.bn(global_feat)
         return global_feat, filename
 
-def run_inference(model, val_loader, cfg, print_freq, use_cuda):
+def run_inference(model, val_loader, use_cuda):
     embeddings = []
     paths = []
     model = model.cuda() if use_cuda else model
 
     for pos, x in enumerate(val_loader):
-        if pos % print_freq == 0:
-            log.info(f"Number of processed images: {pos*cfg.TEST.IMS_PER_BATCH}")
         embedding, path = _inference(model, x, use_cuda)
         for vv, pp in zip(embedding, path):
             paths.append(pp)

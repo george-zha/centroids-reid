@@ -17,7 +17,7 @@ import torch.nn.functional as F
 from torch import nn
 from tqdm import tqdm
 
-from .eval_reid import eval_func
+from .eval_reid import eval_func, list_errors
 
 from .visrank import visualize_ranked_results
 
@@ -90,7 +90,7 @@ class R1_mAP:
             self.dataset = pl_module.trainer.test_dataloaders[0].dataset.samples
 
     # @staticmethod
-    def _commpute_batches_double(self, qf, gf):
+    def _compute_batches_double(self, qf, gf):
         gf_num = gf.shape[0]
         num_batches = (gf_num // 200000) + 35
         gf_batchsize = int((gf_num // num_batches))
@@ -109,7 +109,7 @@ class R1_mAP:
             results.append(distmat_temp)
         return np.hstack(results)
 
-    def compute(self, feats, pids, camids, threshold, respect_camids=False):
+    def compute(self, feats, pids, camids, attr_feats=None, respect_camids=False):
         if self.feat_norm:
             print("The test feature is normalized")
             feats = torch.nn.functional.normalize(feats, dim=1, p=2)
@@ -125,15 +125,26 @@ class R1_mAP:
 
         if n > 30000 and self.pl_module.hparams.MODEL.USE_CENTROIDS:
             print(f"Reid metric no-ranking. Computing batches as n > 30000")
-            distmat = self._commpute_batches_double(qf, gf)
-            indices = np.argsort(distmat, axis=1)
+            distmat = self._compute_batches_double(qf, gf)
         else:
             distmat = self.dist_func(x=qf, y=gf)
-            indices = np.argsort(distmat, axis=1)
         
-        cmc, mAP, all_topk, single_performance, precision = eval_func(
-            indices, distmat, q_pids, g_pids, q_camids, g_camids, threshold, 50, respect_camids
+        a_distmat = torch.zeros(m, n)
+        if attr_feats is not None:
+            attr_feats = torch.tensor_split(attr_feats, [2,12,22,24], dim=1)
+            for a_feat in attr_feats:
+                a_feat = torch.nn.functional.normalize(a_feat, dim=1, p=2)
+                a_dist = self.dist_func(x=a_feat[: self.num_query], y=a_feat[self.num_query :]) * 0.25
+                a_distmat = torch.add(a_distmat, a_dist)
+
+        threshold = self.pl_module.hparams.TEST.THRESHOLD
+        attr_threshold = self.pl_module.hparams.TEST.ATTRIBUTE_THRESHOLD
+        cmc, mAP, all_topk, single_performance, precision, incorrect_set = eval_func(
+            distmat, a_distmat, (q_pids, g_pids), (q_camids, g_camids), threshold, attr_threshold, 50, respect_camids
         )
+
+        if self.hparms.TEST.PRINT_ERRORS == "yes":
+            list_errors(self.dataset, incorrect_set, self.num_query, self.hparms.OUTPUT_DIR, self.hparms.TEST.THRESHOLD)
 
         if self.hparms.TEST.VISUALIZE == "yes":
             print("Start visualization...")
@@ -149,3 +160,4 @@ class R1_mAP:
             )
 
         return cmc, mAP, all_topk, precision
+        

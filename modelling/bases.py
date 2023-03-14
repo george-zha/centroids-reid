@@ -24,7 +24,7 @@ from losses.triplet_loss import CrossEntropyLabelSmooth, TripletLoss
 from modelling.baseline import Baseline
 from solver import build_optimizer, build_scheduler
 from utils.reid_metric import R1_mAP
-
+from person_attributes_v2.models.AttrLitModel import AttrLitModel
 
 def weights_init_classifier(m):
     classname = m.__class__.__name__
@@ -47,6 +47,18 @@ def weights_init_kaiming(m):
         if m.affine:
             nn.init.constant_(m.weight, 1.0)
             nn.init.constant_(m.bias, 0.0)
+
+
+class SplitSoftMax(nn.Module):
+    def __init__(self, splits=[2,10,10,2]):
+        super().__init__()
+        self.splits = splits
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, x):
+        ''' split inputs (logits)'''
+        preds = x.split(self.splits, dim=1)
+        return torch.cat([self.softmax(pred)for pred in preds], dim=1)
 
 
 class ModelBase(pl.LightningModule):
@@ -90,6 +102,11 @@ class ModelBase(pl.LightningModule):
 
         self.losses_names = ["query_xent", "query_triplet", "query_center"]
         self.losses_dict = {n: [] for n in self.losses_names}
+    
+    def init_attr_model(self):
+        task_splits = [2,10,10,2]
+        attr_model = AttrLitModel.load_from_checkpoint(self.hparams.TEST.ATTRIBUTE_MODEL)
+        self.attr_model = nn.Sequential(attr_model, SplitSoftMax(splits=task_splits))
 
     @staticmethod
     def _calculate_centroids(vecs, dim=1):
@@ -172,11 +189,15 @@ class ModelBase(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         self.backbone.eval()
         self.bn.eval()
-        x, class_labels, camid, idx = batch
+        x, y, class_labels, camid, idx = batch
         with torch.no_grad():
             _, emb = self.backbone(x)
             emb = self.bn(emb)
-        return {"emb": emb, "labels": class_labels, "camid": camid, "idx": idx}
+        attr_emb = None
+        if self.hparams.TEST.ATTRIBUTE_MODEL:
+            attr_emb = self.attr_model(y)
+        
+        return {"emb": emb, "attr_emb": attr_emb, "labels": class_labels, "camid": camid, "idx": idx}
 
     @rank_zero_only
     def validation_create_centroids(
@@ -264,7 +285,7 @@ class ModelBase(pl.LightningModule):
         return centroids_embeddings.cpu(), centroids_labels, centroids_camids
 
     @rank_zero_only
-    def get_val_metrics(self, embeddings, labels, camids):
+    def get_val_metrics(self, embeddings, attr_embeds, labels, camids):
         self.r1_map_func = R1_mAP(
             pl_module=self,
             num_query=self.hparams.num_query,
@@ -280,9 +301,9 @@ class ModelBase(pl.LightningModule):
         )
         cmc, mAP, all_topk, precision = self.r1_map_func.compute(
             feats=embeddings.float(),
+            attr_feats=attr_embeds,
             pids=labels,
             camids=camids,
-            threshold=self.hparams.TEST.THRESHOLD,
             respect_camids=respect_camids,
         )
 
@@ -291,8 +312,6 @@ class ModelBase(pl.LightningModule):
             print("top-k, Rank-{:<3}:{:.1%}".format(kk, top_k))
             topks[f"Top-{kk}"] = top_k
         print(f"mAP: {mAP}")
-        print(f"Precision at {self.hparams.TEST.THRESHOLD} threshold: {precision}")
-
         log_data = {"mAP": mAP}
 
         # TODO This line below is hacky, but it works when grad_monitoring is active
@@ -308,7 +327,14 @@ class ModelBase(pl.LightningModule):
                 torch.cat([x.pop("labels") for x in outputs]).detach().cpu().numpy()
             )
             camids = torch.cat([x.pop("camid") for x in outputs]).cpu().detach().numpy()
+
+            if self.hparams.TEST.ATTRIBUTE_MODEL:
+                attr_embeds = torch.cat([x.pop("attr_emb") for x in outputs]).detach().cpu()
+                torch.nn.functional.normalize(attr_embeds, dim=0)
+            else:
+                attr_embeds = None
             del outputs
+
             if self.hparams.MODEL.USE_CENTROIDS:
                 print("Evaluation is done using centroids")
                 embeddings, labels, camids = self.validation_create_centroids(
@@ -318,8 +344,8 @@ class ModelBase(pl.LightningModule):
                     respect_camids=self.hparams.MODEL.KEEP_CAMID_CENTROIDS,
                 )
             if self.trainer.global_rank == 0 and self.trainer.local_rank == 0:
-                self.get_val_metrics(embeddings, labels, camids)
-            del embeddings, labels, camids
+                self.get_val_metrics(embeddings, attr_embeds, labels, camids)
+            del embeddings, attr_embeds, labels, camids
         self.trainer.accelerator_backend.barrier()
 
     @rank_zero_only
@@ -328,7 +354,7 @@ class ModelBase(pl.LightningModule):
             outputs = []
             device = list(self.backbone.parameters())[0].device
             for batch_idx, batch in enumerate(self.test_dataloader):
-                x, class_labels, camid, idx = batch
+                x, y, class_labels, camid, idx = batch
                 with torch.no_grad():
                     emb = self.backbone(x.to(device))
                 outputs.append(

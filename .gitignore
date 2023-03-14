@@ -3,6 +3,7 @@
 ./logs*
 ./debugs*
 ./mlruns*
+/models/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -141,7 +142,6 @@ dmypy.json
 tb_logs/
 .vscode
 logs/
-models/
 experiments/
 results/
 tmp/

@@ -11,5 +11,7 @@ TEST.IMS_PER_BATCH 128 \
 TEST.FEAT_NORM True \
 TEST.THRESHOLD 0.8 \
 TEST.VISUALIZE "no" \
+TEST.ATTRIBUTE_MODEL '/home/georgez/batch_balanced_resnet152.ckpt' \
+TEST.ATTRIBUTE_THRESHOLD 0.6 \
 MODEL.PRETRAIN_PATH "logs/market1501/market1501.ckpt" \
 OUTPUT_DIR './logs/market1501/' \

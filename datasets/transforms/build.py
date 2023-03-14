@@ -32,3 +32,11 @@ class ReidTransforms():
             ])
 
         return transform
+    
+    def build_attr_transforms(self):
+        transform = T.Compose([
+            T.Resize((400,200)),
+            T.ToTensor(),
+        ])
+        return transform
+    

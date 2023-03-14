@@ -1,7 +1,7 @@
 MODEL:
   NAME: 'resnet50'
   BACKBONE_EMB_SIZE: 2048
-  PRETRAIN_PATH: '/home/ubuntu/centroids-reid/models/verkada-neuron-resnet50.pt'
+  PRETRAIN_PATH: '/home/georgez/centroids-reid/logs/combined_data/public-verkada.ckpt'
   KEEP_CAMID_CENTROIDS: True
 
 INPUT:
@@ -20,7 +20,7 @@ SOLVER:
   DISTANCE_FUNC: 'cosine'
 
 TEST:
-  IMS_PER_BATCH: 2048
+  IMS_PER_BATCH: 1000
   ONLY_TEST: True
   FEAT_NORM: True
 

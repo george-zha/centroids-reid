@@ -10,6 +10,7 @@ Adapted and extended by:
 
 import numpy as np
 import torch
+import os
 from tqdm import tqdm
 
 k_list = [1, 5, 10, 20, 50]
@@ -23,17 +24,23 @@ def top_k_retrieval(row_matches: np.ndarray, k: list):
 
 
 def eval_func(
-    indices, distmat, q_pids, g_pids, q_camids, g_camids, threshold, max_rank=50, respect_camids=False
+    distmat, attr_distmat, pids, camids, threshold, attr_threshold, max_rank=50, respect_camids=False
 ):
     """
     Evaluation with market1501 metric
     Key: for each query identity, its gallery images from the same camera view are discarded.
     """
+    indices = np.argsort(distmat, axis=1)
+    q_pids, g_pids = pids[0], pids[1]
+    q_camids, g_camids = camids[0], camids[1]
+
     num_q, num_g = indices.shape
     if num_g < max_rank:
         max_rank = num_g
         print("Note: number of gallery samples is quite small, got {}".format(num_g))
     matches = (g_pids[indices] == q_pids[:, np.newaxis]).astype(np.int32)
+    unordered_matches = (g_pids == q_pids[:, np.newaxis]).astype(np.int32)
+    unordered_nonmatch = (g_pids != q_pids[:, np.newaxis]).astype(np.int32)
 
     # compute cmc curve for each query
     all_cmc = []
@@ -43,6 +50,8 @@ def eval_func(
     total_under_t = 0
     topk_results = []  # Store topk retureval
     single_performance = []
+    incorrect_per_pid = {}
+    thresh_prec = {0.05: [0,0], 0.1: [0,0], 0.2: [0,0], 0.5: [0,0]}
 
     for q_idx in tqdm(range(num_q)):
         # get query pid and camid
@@ -57,7 +66,8 @@ def eval_func(
                 for gpid, gcamid in zip(g_pids[order], g_camids[order])
             ]
         else:
-            remove = (g_pids[order] == q_pid) & (g_camids[order] == q_camid)
+        #   remove = (g_pids[order] == q_pid) & (g_camids[order] == q_camid)
+            remove = [False] * len(order)
         keep = np.invert(remove)
 
         # compute cmc curve
@@ -72,8 +82,19 @@ def eval_func(
 
         all_cmc.append(cmc[:max_rank])
         num_valid_q += 1.0
-        correct_under_t += torch.sum((distmat[q_idx][order] < threshold) & matches[q_idx])
-        total_under_t += torch.sum(distmat[q_idx][order] < threshold)
+        
+        # Find false positives and negatives
+        fp = np.where((distmat[q_idx]<threshold) & unordered_nonmatch[q_idx])[0]
+        fn = np.where((distmat[q_idx]>=threshold) & unordered_matches[q_idx])[0]
+        incorrect_per_pid[q_idx] = np.concatenate((fp,fn))
+        
+        # Add to precision calculation
+        if attr_threshold:
+            for i in thresh_prec:
+                thresh_prec[i][0] += int(torch.sum((distmat[q_idx]<threshold) & (attr_distmat[q_idx]<i) & unordered_matches[q_idx]))
+                thresh_prec[i][1] += int(torch.sum((distmat[q_idx] < threshold) & (attr_distmat[q_idx]<i)))
+        correct_under_t += int(torch.sum((distmat[q_idx]<threshold) & unordered_matches[q_idx]))
+        total_under_t += int(torch.sum(distmat[q_idx] < threshold))
 
         # compute average precision
         # reference: https://en.wikipedia.org/wiki/Evaluation_measures_(information_retrieval)#Average_precision
@@ -93,6 +114,23 @@ def eval_func(
     mAP = np.mean(all_AP)
     all_topk = np.vstack(topk_results)
     all_topk = np.mean(all_topk, 0)
-    precision = -1 if not total_under_t else correct_under_t / total_under_t
 
-    return all_cmc, mAP, all_topk, np.array(single_performance), precision
+    for i in thresh_prec:
+        precision = -1 if not thresh_prec[i][1] else thresh_prec[i][0] / thresh_prec[i][1]
+        print(f"Precision at {i} threshold: {precision}")
+        print("Total number of results: " + str(thresh_prec[i][1]))
+    precision = -1 if not total_under_t else correct_under_t / total_under_t
+    return all_cmc, mAP, all_topk, np.array(single_performance), precision, incorrect_per_pid
+
+def list_errors(dataset, errors, num_q, output_dir, thresh):
+    filename = "errors_" + str(thresh) + ".txt"
+    file_p = os.path.join(output_dir, filename)
+    with open(file_p, 'w') as efile:
+        for q_id in errors:
+            q_source, _, _, _ = dataset[q_id]
+            efile.write(q_source + " ")
+
+            for g_id in errors[q_id]:
+                g_source, _, _, _ = dataset[g_id+num_q]
+                efile.write(g_source + " ")
+            efile.write('\n')

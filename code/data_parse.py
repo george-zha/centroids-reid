@@ -21,12 +21,11 @@ class Parser:
         self.match_data = "/home/georgez/datasets/appearance-search-dedup/"
         self.video_data = "/home/georgez/datasets/people-tracking-videos/"
         self.framesperpid = 5
-        self.output = "/home/georgez/datasets/verkada_data_limitedquery/"
+        self.output = "/home/georgez/datasets/verkada_data/"
         self.debug = Debug()
         self.testsplit = 0.2
-
+        
         os.mkdir(self.output)
-
 
     def crop(self, bounding_box, annofile, frame):
         """
@@ -49,7 +48,6 @@ class Parser:
         x2 = int(min(wt-x1, bounding_box['w'])) + x1
 
         return frame[y1:y2, x1:x2]
-
 
     def extract_frames(self, anno_id, out):
         """
@@ -159,16 +157,40 @@ class Parser:
         print("Cameras in test, train: " + str(len(camids)) + ", " + str(len(self.cam2anno)-len(camids)))
 
         with open('evalanno.txt', 'w') as evalfile, open('trainanno.txt', 'w') as trainfile:
-            for cid in self.cam2anno:
-                for anno in self.cam2anno[cid]:
-                    if anno in self.pid2anno[longestid]:
+            for pid in self.pid2anno:
+                annos = self.pid2anno[pid]
+                train = None
+                try:
+                    train = self.anno_info[annos[0]]['cid'] in camids
+                except:
+                    continue
+
+                for anno in annos:
+                    try:
+                        if (self.anno_info[anno]['cid'] in camids) != train and train != None:
+                            print("this person is in both train and eval")
+                            print(anno)
+                    except:
                         continue
-                    if cid in camids:
-                        evalfile.write(anno+'\n')
-                        self.extract_frames(anno, self.test)
+                    if train:
+                        evalfile.write(anno+' ')
                     else:
-                        self.extract_frames(anno, self.train)
-                        trainfile.write(anno+'\n')
+                        trainfile.write(anno+' ')
+                if train:
+                    evalfile.write('\n')
+                else:
+                    trainfile.write('\n')
+                    
+            # for cid in self.cam2anno:
+            #     for anno in self.cam2anno[cid]:
+            #         if anno in self.pid2anno[longestid]:
+            #             continue
+            #         if cid in camids:
+            #             evalfile.write(anno+'\n')
+            #             self.extract_frames(anno, self.test)
+            #         else:
+            #             self.extract_frames(anno, self.train)
+            #             trainfile.write(anno+'\n')
 
 
     def groupingHelper(self, longestid):
@@ -259,7 +281,7 @@ class Parser:
                         anno2pid[first] = tmp
 
                     elif anno2pid[first] != anno2pid[second]:
-                        # # EXTRACT ON MATCH
+                        # EXTRACT ONE ON MATCH
                         # pid2anno[anno2pid[first]].append(second)
                         # pid2anno[anno2pid[second]].remove(second)
                         # anno2pid[second] = anno2pid[first]
@@ -272,6 +294,7 @@ class Parser:
                             anno2pid[i] = anno2pid[first]
 
                 else:
+                    # Does not do anything if two tracks previously grouped are now marked different
                     if first not in anno2pid:
                         anno2pid[first] = pid
                         pid2anno[pid] = [first]
@@ -280,11 +303,6 @@ class Parser:
                         anno2pid[second] = pid
                         pid2anno[pid] = [second]
                         pid += 1
-                    # if anno2pid[first] == anno2pid[second]:
-                    #     pid2anno[anno2pid[second]].remove(second)
-                    #     pid2anno[pid] = [second]
-                    #     anno2pid[second] = pid
-                    #     pid += 1
 
         ret = list(pid2anno.values())
         self.anno_info = {}

@@ -77,9 +77,9 @@ class ReidBaseDataModule(pl.LightningDataModule):
             self.query_list.extend(query)
             self.gallery_dict.update(gallery_dict)
             self.gallery_list.extend(gallery)
-            
+
         self.train = BaseDatasetLabelledPerPid(self.train_dict, transforms_base.build_transforms(is_train=True), self.num_instances, self.cfg.DATALOADER.USE_RESAMPLING)
-        self.val = BaseDatasetLabelled(self.query_list+self.gallery_list, transforms_base.build_transforms(is_train=False))
+        self.val = BaseDatasetLabelled(self.query_list+self.gallery_list, transforms_base.build_transforms(is_train=False), transforms_base.build_attr_transforms())
 
         self._print_dataset_statistics(self.train_list, self.query_list, self.gallery_list)
         # For reid_metic to evaluate properly
@@ -466,9 +466,10 @@ class BaseDatasetLabelledPerPid(Dataset):
 
 
 class BaseDatasetLabelled(Dataset):
-    def __init__(self, data, transform=None, return_paths=False):
+    def __init__(self, data, transform=None, attr_transform=None, return_paths=False):
         self.samples = data
         self.transform = transform
+        self.attr_transform = attr_transform
         self.return_paths = return_paths
 
     def __getitem__(self, index):
@@ -483,11 +484,14 @@ class BaseDatasetLabelled(Dataset):
         sample = pil_loader(path)
         if self.transform is not None:
             sample = self.transform(sample)
+        attr_sample = pil_loader(path)
+        if self.attr_transform is not None:
+            attr_sample = self.attr_transform(attr_sample)
 
         if self.return_paths:
-            return sample, target, camid, path
+            return sample, attr_sample, target, camid, path
         else:
-            return sample, target, camid, idx
+            return sample, attr_sample, target, camid, idx
 
     def __len__(self):
         return len(self.samples)
